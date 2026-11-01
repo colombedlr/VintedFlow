@@ -149,6 +149,7 @@ export function Reglages() {
           <>
             <span class="small">Connecté : {store.email}</span>
             <span class="small muted">{store.status.online ? (store.status.pending ? 'Envoi des dernières modifications…' : 'Tout est synchronisé.') : 'Hors ligne : tout est gardé sur l’appareil et partira au retour du réseau.'}</span>
+            <button class="chip" aria-pressed={!!brut.gemini?.actif} onClick={() => maj({ gemini: { actif: !brut.gemini?.actif } })}>Analyse photo intégrée (Gemini, payant)</button>
             <Champ label="Modèle Gemini pour l’analyse photo"><input class="input" value={brut.gemini?.modele || ''} onChange={(e) => maj({ gemini: { modele: e.currentTarget.value.trim() } })} /></Champ>
             <button class="btn s ghost" onClick={async () => { if (await confirmer('Se déconnecter ?')) store.signOut(); }}>Se déconnecter</button>
           </>

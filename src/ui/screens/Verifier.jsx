@@ -6,6 +6,7 @@ import { CONTROLES_CONTREFACON } from '../../data/marques.js';
 import { nouvelId } from '../../data/schema.js';
 import { compresserPhoto } from '../../util/photo.js';
 import { iaDisponible, analyserPhotos } from '../../ai/gemini.js';
+import { partagerAAssistant, lireReponse } from '../../ai/assistant.js';
 
 const CHIPS = [10, 15, 18, 20, 25, 30, 35, 40, 50, 60];
 const RISQUE = { faible: ['green', 'faible'], moyen: ['orange', 'moyen'], eleve: ['red', 'élevé'] };
@@ -30,6 +31,8 @@ export function Verifier() {
   const [controles, setControles] = useState({});
   const [doute, setDoute] = useState(false);
   const [enCoursPhoto, setEnCoursPhoto] = useState(false);
+  const [assistant, setAssistant] = useState(null); // null | 'partage' | 'copie'
+  const [reponse, setReponse] = useState('');
   const fileRef = useRef(null);
   const roleRef = useRef('piece');
   const hautRef = useRef(null);
@@ -70,6 +73,8 @@ export function Verifier() {
     setRevente(null);
     setControles({});
     setDoute(false);
+    setAssistant(null);
+    setReponse('');
     hautRef.current?.scrollIntoView({ block: 'start' });
   };
 
@@ -105,6 +110,35 @@ export function Verifier() {
     } catch (e) {
       setIaEtat('erreur');
       setIaErreur(e?.message || 'Analyse impossible.');
+    }
+  };
+
+  const demanderAssistant = async () => {
+    const r = await partagerAAssistant(photos, marque ? `marque probable : ${marque}` : '');
+    if (r !== 'annule') setAssistant(r);
+  };
+
+  const appliquerReponse = (txt) => {
+    setReponse(txt);
+    const r = lireReponse(txt);
+    if (!r) return false;
+    setIa(r);
+    setIaEtat('ok');
+    setIaErreur('');
+    if (!marque && r.marque) setMarque(r.marque);
+    setRevente(null);
+    setAssistant(null);
+    setReponse('');
+    toast('Réponse lue : référence de prix mise à jour.');
+    return true;
+  };
+
+  const collerReponse = async () => {
+    try {
+      const txt = await navigator.clipboard.readText();
+      if (!appliquerReponse(txt)) toast('Je ne trouve pas la ligne « REVENTE » dans ce que tu as copié.');
+    } catch {
+      toast('Collage refusé : colle la réponse dans le champ ci-dessous.');
     }
   };
 
@@ -199,13 +233,23 @@ export function Verifier() {
         </div>
         <input ref={fileRef} type="file" accept="image/*" capture="environment" style="display:none" onChange={surFichier} />
         {photos.length > 0 && (
-          iaDisponible() ? (
-            <button class="btn dark" onClick={analyser} disabled={iaEtat === 'chargement'}>
-              <Etincelle color="var(--lilac)" />{iaEtat === 'chargement' ? 'Analyse en cours…' : ia ? 'Relancer l’analyse' : 'Analyser le potentiel'}
-            </button>
-          ) : (
-            <span class="small muted row"><IconHorsLigne size={16} />{store.status.online ? 'Analyse photo pas encore configurée : utilise la marque.' : 'Pas de réseau : utilise la marque, elle marche hors ligne.'}</span>
-          )
+          <div class="btns">
+            <button class="btn dark" onClick={demanderAssistant}><Etincelle color="var(--lilac)" />{ia ? 'Redemander à Claude ou ChatGPT' : 'Demander à Claude ou ChatGPT'}</button>
+            {assistant && (
+              <div class="col" style="gap:8px">
+                <span class="small muted">
+                  {assistant === 'partage'
+                    ? 'Choisis Claude ou ChatGPT dans le partage. La consigne est copiée : colle-la si elle n’apparaît pas. Copie ensuite la réponse et reviens ici.'
+                    : 'Consigne copiée. Ouvre Claude ou ChatGPT, ajoute la photo, colle la consigne, puis copie la réponse et reviens ici.'}
+                </span>
+                <button class="btn primary" onClick={collerReponse}>Coller la réponse</button>
+                <textarea class="input" aria-label="Réponse de l’assistant" placeholder="Ou colle la réponse ici à la main" value={reponse} onInput={(e) => appliquerReponse(e.currentTarget.value)} />
+              </div>
+            )}
+            {s.gemini?.actif && iaDisponible() && (
+              <button class="btn ghost" onClick={analyser} disabled={iaEtat === 'chargement'}>{iaEtat === 'chargement' ? 'Analyse en cours…' : 'Analyse intégrée (Gemini)'}</button>
+            )}
+          </div>
         )}
         {iaEtat === 'erreur' && <span class="small" style="color:var(--red-ink)">{iaErreur}</span>}
       </section>

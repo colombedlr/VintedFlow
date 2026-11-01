@@ -60,7 +60,7 @@ export function Marques() {
         <section class="card">
           <span class="strong">« {q.trim()} » n’est pas dans ton catalogue</span>
           <span class="small muted">Avec du réseau, l’IA peut te donner une première fiche, qui s’ajoute à ton catalogue. Sinon, crée-la à la main.</span>
-          {iaDisponible() && <button class="btn dark" disabled={chargement} onClick={chercherEnLigne}><Etincelle />{chargement ? 'Recherche…' : 'Chercher en ligne'}</button>}
+          {s.gemini?.actif && iaDisponible() && <button class="btn dark" disabled={chargement} onClick={chercherEnLigne}><Etincelle />{chargement ? 'Recherche…' : 'Chercher en ligne'}</button>}
           <button class="btn ghost" onClick={() => setEdition({ nom: q.trim(), pot: 'faible', lo: 5, hi: 15, risque: 'faible', note: '' })}>Créer la fiche</button>
         </section>
       )}

@@ -163,3 +163,15 @@ test('tâches : charge, surcharge et retard', () => {
   assert.deepEqual(c.aReporter.map((t) => t.id), ['t1']);
   assert.equal(tachesEnRetard(st, today).length, 1);
 });
+
+import { lireReponse } from '../src/ai/assistant.js';
+test('lecture d’une réponse Claude ou ChatGPT', () => {
+  const r = lireReponse(`Voici :\n**PIECE:** jean taille basse\nMARQUE: Miss Sixty\nPOTENTIEL: Fort\nREVENTE: 20 - 30 €\nCONTREFACON: faible\nSIGNAUX: étiquette nette\nA VERIFIER: fermeture éclair`);
+  assert.equal(r.marque, 'Miss Sixty');
+  assert.equal(r.revente_min, 20);
+  assert.equal(r.revente_max, 30);
+  assert.equal(r.potentiel, 'fort');
+  assert.equal(r.risque_contrefacon, 'faible');
+  assert.equal(lireReponse('bonjour'), null);
+  assert.equal(lireReponse('MARQUE: inconnue\nREVENTE: 15-25\nCONTREFAÇON: élevé').risque_contrefacon, 'eleve');
+});
