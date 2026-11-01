@@ -87,6 +87,21 @@ export function App({ store, essai = false, sansConfig = false }) {
       <div class="page" style="justify-content:center;align-items:center;min-height:100dvh">
         <span class="row" style="font-family:var(--display);font-weight:700;font-size:22px"><Etincelle size={18} color="var(--accent)" /> VintedFlow</span>
         <p class="muted small">{store.status.online || store.status.mode === 'local' ? 'Chargement…' : 'Chargement depuis l’appareil…'}</p>
+        {store.status.erreur && (
+          <div class="card danger" style="max-width:440px">
+            <span class="strong">La base de données ne répond pas</span>
+            <span class="small">
+              {/permission|insufficient/i.test(store.status.erreur)
+                ? 'Accès refusé : les règles Firestore ne sont pas publiées. Firebase → Firestore Database → Règles → coller les règles → Publier.'
+                : /not.?found|does not exist|NOT_FOUND/i.test(store.status.erreur)
+                  ? 'La base Firestore n’existe pas encore : Firebase → Firestore Database → Créer une base de données.'
+                  : 'Vérifie que la base Firestore est créée et que ses règles sont publiées.'}
+            </span>
+            <span class="xs" style="word-break:break-word">Détail : {store.status.erreur}</span>
+            <button class="btn s ghost" onClick={() => location.reload()}>Réessayer</button>
+            <button class="btn s ghost" onClick={() => store.signOut()}>Se déconnecter</button>
+          </div>
+        )}
       </div>
     );
   }
