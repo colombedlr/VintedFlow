@@ -125,3 +125,41 @@ test('envois et articles à revoir', () => {
   const j = journee(st, today, 9 * 60 + 10);
   assert.ok(j.blocs.length >= 2);
 });
+
+import { repartitionBudget } from '../src/logic/planning.js';
+import { chargeDuJour, tachesEnRetard } from '../src/logic/taches.js';
+
+test('ajout d’une sortie : le budget de la semaine est réparti à nouveau', () => {
+  const today = '2026-11-09';
+  const st = etat(today);
+  const s = settingsParDefaut(today);
+  st.sorties = {
+    a: { id: 'a', date: '2026-11-11', statut: 'prevue', budget: 60 },
+    b: { id: 'b', date: '2026-11-14', statut: 'prevue', budget: 65 },
+    c: { id: 'c', date: '2026-11-13', statut: 'prevue', budget: 0 }
+  };
+  const r = repartitionBudget(st, '2026-11-09', s, today);
+  assert.equal(r.reduce((t, x) => t + x.budget, 0), 125);
+  const parId = Object.fromEntries(r.map((x) => [x.id, x.budget]));
+  assert.ok(parId.b > parId.a); // le samedi pèse plus
+  // une sortie terminée garde son budget
+  st.sorties.a.statut = 'terminee';
+  const r2 = repartitionBudget(st, '2026-11-09', s, today);
+  assert.equal(r2.reduce((t, x) => t + x.budget, 0), 65);
+});
+
+test('tâches : charge, surcharge et retard', () => {
+  const today = '2026-11-10';
+  const st = etat(today);
+  const s = settingsParDefaut(today);
+  st.taches = {
+    t1: { id: 't1', titre: 'Longue', type: 'perso', date: today, duree: 120 },
+    t2: { id: 't2', titre: 'Sport', type: 'perso', jours: [2], duree: 75, importante: true, faitLe: {} },
+    t3: { id: 't3', titre: 'Oubliée', type: 'pro', date: '2026-11-08', duree: 15 }
+  };
+  const c = chargeDuJour(st, s, today, []);
+  assert.equal(c.perso.prevu, 195);
+  assert.equal(c.surcharge, true);
+  assert.deepEqual(c.aReporter.map((t) => t.id), ['t1']);
+  assert.equal(tachesEnRetard(st, today).length, 1);
+});

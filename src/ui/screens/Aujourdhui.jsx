@@ -6,6 +6,7 @@ import { liste, sortieEnCours, envoisAFaire, articlesARevoir, objectifMois, sema
 import { fmtE } from '../../logic/rules.js';
 import { effacerExemples } from '../../data/seed.js';
 import { TYPES_TEMPS } from '../../data/schema.js';
+import { TachesAujourdhui } from './Taches.jsx';
 
 const LABEL_BLOC = { sourcing: 'Sourcing', preparation: 'Préparation', photos: 'Photos', annonces: 'Annonces', envois: 'Envois' };
 
@@ -122,6 +123,8 @@ export function Aujourdhui() {
           })}
         </section>
       )}
+
+      <TachesAujourdhui blocs={blocs} />
 
       {lundiAPreparer && (
         <a class="card soft" href="#/semaine" style="text-decoration:none">

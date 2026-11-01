@@ -3,10 +3,11 @@ import { useApp, aller, Feuille, Champ, Vignette, Bac, IconLoupe } from '../base
 import { liste, sortieEnCours, rechercherArticles, chercherMarques } from '../../logic/calc.js';
 import { MouvementFeuille } from './Bilan.jsx';
 import { VenteFeuille } from './Stock.jsx';
+import { EditionTache } from './Taches.jsx';
 import { fmtE } from '../../logic/rules.js';
 
 export function MenuAjouter({ onClose }) {
-  const { state } = useApp();
+  const { state, today } = useApp();
   const [vue, setVue] = useState('menu');
   const [article, setArticle] = useState(null);
   const [large, setLarge] = useState(false);
@@ -21,9 +22,11 @@ export function MenuAjouter({ onClose }) {
   if (vue === 'vente') return <ChoixArticle onClose={onClose} onChoix={setArticle} />;
   if (['depense', 'temps', 'virement_vinted', 'retrait_perso'].includes(vue)) return <MouvementFeuille type={vue} onClose={onClose} />;
   if (vue === 'horsregle') return <HorsRegle onClose={onClose} />;
+  if (vue === 'tache') return <EditionTache init={{ type: 'pro', date: today, duree: 30 }} onClose={onClose} />;
 
   const options = [
     { id: 'verifier', titre: enCours ? 'Vérifier et acheter une pièce' : 'Vérifier une pièce', st: enCours ? 'Sortie en cours : budget et sacs suivis' : 'Le feu vert, orange ou rouge', go: () => go(enCours ? `/verifier?sortie=${enCours.id}` : '/verifier') },
+    { id: 'tache', titre: 'Tâche perso ou pro', st: 'Placée dans ta journée, avec sa durée', go: () => setVue('tache') },
     { id: 'vente', titre: 'Enregistrer une vente', st: 'Lance le délai d’envoi de 5 jours ouvrés', go: () => setVue('vente') },
     { id: 'temps', titre: 'Temps travaillé', st: 'Pour ton bénéfice par heure', go: () => setVue('temps') },
     { id: 'depense', titre: 'Dépense', st: 'Boost, cintres, autre frais', go: () => setVue('depense') },

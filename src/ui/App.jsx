@@ -13,6 +13,7 @@ import { Stock, ArticlePage } from './screens/Stock.jsx';
 import { Bilan } from './screens/Bilan.jsx';
 import { Reglages } from './screens/Reglages.jsx';
 import { MenuAjouter } from './screens/Ajouter.jsx';
+import { Taches } from './screens/Taches.jsx';
 
 export function EtatSynchro({ store }) {
   const st = store.status;
@@ -40,7 +41,7 @@ function ongletActif(segs) {
   if (['stock', 'article', 'marques'].includes(s)) return 'stock';
   if (['semaine', 'lieux', 'lieu'].includes(s)) return 'semaine';
   if (['bilan', 'reglages'].includes(s)) return 'bilan';
-  if (s === 'aujourdhui') return 'aujourdhui';
+  if (s === 'aujourdhui' || s === 'taches') return s === 'taches' ? 'taches' : 'aujourdhui';
   return s;
 }
 
@@ -109,6 +110,7 @@ export function App({ store, essai = false, sansConfig = false }) {
     case 'article': contenu = <ArticlePage id={segs[1]} />; break;
     case 'bilan': contenu = <Bilan />; break;
     case 'reglages': contenu = <Reglages />; break;
+    case 'taches': contenu = <Taches />; break;
     default: contenu = <Aujourdhui />;
   }
 
@@ -120,6 +122,7 @@ export function App({ store, essai = false, sansConfig = false }) {
             <div class="liens">
               <span class="marque-app"><Etincelle size={16} color="var(--accent)" />{s.appName || 'VintedFlow'}</span>
               <a href="#/" aria-current={actif === 'aujourdhui' ? 'page' : undefined}>Aujourd’hui</a>
+              <a href="#/taches" aria-current={actif === 'taches' ? 'page' : undefined}>Tâches</a>
               <a href="#/semaine" aria-current={actif === 'semaine' ? 'page' : undefined}>Semaine</a>
               <a href="#/stock" aria-current={actif === 'stock' ? 'page' : undefined}>Stock</a>
               <a href="#/bilan" aria-current={actif === 'bilan' ? 'page' : undefined}>Bilan</a>

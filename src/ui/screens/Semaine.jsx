@@ -2,7 +2,7 @@ import { useState } from 'preact/hooks';
 import { useApp, aller, Feuille, Champ, IconCadenas } from '../base.jsx';
 import { addDays, mondayOf, fmtCourt, jourCourt, dayOfMonth, dayOfWeek } from '../../logic/dates.js';
 import { semaineInfo, liste } from '../../logic/calc.js';
-import { proposerSemaine, lieuxOuverts, tourneesDuJour, coutTournee, heureDepart, accesTexte } from '../../logic/planning.js';
+import { proposerSemaine, lieuxOuverts, tourneesDuJour, coutTournee, heureDepart, accesTexte, repartitionBudget } from '../../logic/planning.js';
 import { fmtE } from '../../logic/rules.js';
 import { MODES_ACCES } from '../../data/lieux.js';
 
@@ -19,6 +19,10 @@ export function Semaine() {
   const actives = sem.sorties.length;
   const nbLieux = liste(state.lieux).length;
   const aValider = liste(state.lieux).filter((l) => l.aValider).length;
+
+  const repartir = () => {
+    for (const r of repartitionBudget(store.state, lundi, s, today)) store.patch('sorties', r.id, { budget: r.budget });
+  };
 
   const proposer = () => {
     const props = proposerSemaine(state, lundi, s).filter((p) => p.date >= today);
@@ -106,7 +110,12 @@ export function Semaine() {
 
       {!sem.verrouillee && toutes.length > 0 && (
         <div class="btns">
-          {actives < max && sem.nonAlloue > 0 && <button class="btn ghost" onClick={() => setEdit('nouvelle')}>+ Ajouter une sortie</button>}
+          {actives < max ? (
+            <button class="btn ghost" onClick={() => setEdit('nouvelle')}>+ Ajouter une sortie ({actives}/{max})</button>
+          ) : (
+            <p class="small muted" style="text-align:center">Tu as atteint tes {max} sorties de la semaine.</p>
+          )}
+          <button class="btn s ghost" onClick={repartir}>Répartir le budget entre les sorties</button>
           <button class="btn primary big" onClick={verrouiller}><IconCadenas size={20} />Valider et verrouiller la semaine</button>
           <p class="xs muted" style="text-align:center">Budgets figés jusqu’à lundi prochain.</p>
         </div>
@@ -122,12 +131,12 @@ export function Semaine() {
         </span>
       </a>
 
-      {edit && <EditeurSortie id={edit === 'nouvelle' ? null : edit} lundi={lundi} sem={sem} onClose={() => setEdit(null)} />}
+      {edit && <EditeurSortie id={edit === 'nouvelle' ? null : edit} lundi={lundi} sem={sem} onClose={() => setEdit(null)} onRepartir={repartir} />}
     </main>
   );
 }
 
-function EditeurSortie({ id, lundi, sem, onClose }) {
+function EditeurSortie({ id, lundi, sem, onClose, onRepartir }) {
   const { store, state, s, today, toast, confirmer } = useApp();
   const existante = id ? state.sorties[id] : null;
   const verrou = sem.verrouillee;
@@ -151,11 +160,16 @@ function EditeurSortie({ id, lundi, sem, onClose }) {
 
   const enregistrer = () => {
     if (!lieuxIds.length) return toast('Choisis au moins un lieu.');
-    const b = verrou && existante ? existante.budget : Math.min(Number(budget) || 0, budgetMax);
-    if (b <= 0) return toast('Il n’y a plus de budget à répartir cette semaine.');
+    const auto = !verrou && !existante;
+    const b = auto ? 0 : verrou && existante ? existante.budget : Math.min(Number(budget) || 0, budgetMax);
+    if (!auto && b <= 0) return toast('Il n’y a plus de budget à répartir cette semaine.');
     const data = { date, heure, lieuxIds, budget: b, piecesMax: Math.max(1, Number(pieces) || s.discipline.piecesMax), transportPrevu: transport };
     if (existante) store.patch('sorties', existante.id, data);
     else store.put('sorties', { ...data, statut: 'prevue' });
+    if (auto) {
+      onRepartir();
+      toast('Sortie ajoutée. Budget de la semaine réparti à nouveau.');
+    }
     onClose();
   };
 
@@ -198,9 +212,13 @@ function EditeurSortie({ id, lundi, sem, onClose }) {
       </div>
 
       <div class="grid2">
-        <Champ label={verrou ? 'Budget (verrouillé)' : `Budget (max ${fmtE(budgetMax)})`}>
-          <input class="input" type="number" inputMode="decimal" min="0" max={budgetMax} value={budget} disabled={verrou && !!existante} onInput={(e) => setBudget(e.currentTarget.value)} />
-        </Champ>
+        {!verrou && !existante ? (
+          <div class="stat"><span>Budget</span><b style="font-size:14px">Réparti automatiquement</b></div>
+        ) : (
+          <Champ label={verrou ? 'Budget (verrouillé)' : `Budget (max ${fmtE(budgetMax)})`}>
+            <input class="input" type="number" inputMode="decimal" min="0" max={budgetMax} value={budget} disabled={verrou && !!existante} onInput={(e) => setBudget(e.currentTarget.value)} />
+          </Champ>
+        )}
         <Champ label="Pièces max (sacs)">
           <input class="input" type="number" inputMode="numeric" min="1" value={pieces} onInput={(e) => setPieces(e.currentTarget.value)} />
         </Champ>
@@ -215,7 +233,10 @@ function EditeurSortie({ id, lundi, sem, onClose }) {
             onClick={async () => {
               if (verrou) {
                 if (await confirmer('Annuler cette sortie ? Son budget ne sera pas redistribué.')) store.patch('sorties', existante.id, { statut: 'annulee', budgetPerdu: true });
-              } else if (await confirmer('Supprimer cette sortie ?')) store.remove('sorties', existante.id);
+              } else if (await confirmer('Supprimer cette sortie ? Son budget sera réparti entre les autres.')) {
+                store.remove('sorties', existante.id);
+                onRepartir();
+              }
               onClose();
             }}
           >

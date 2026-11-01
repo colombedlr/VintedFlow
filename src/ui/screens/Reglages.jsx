@@ -6,6 +6,7 @@ import { fmtE } from '../../logic/rules.js';
 import { exporterExcel, exporterCSV, exporterJSON } from '../../util/export.js';
 import { effacerExemples } from '../../data/seed.js';
 import { TYPES_TEMPS } from '../../data/schema.js';
+import { tempsDe } from '../../logic/taches.js';
 
 const CHAMPS_DISCIPLINE = [
   ['minRevente', 'Revente minimum (€)'],
@@ -93,6 +94,18 @@ export function Reglages() {
           <Champ label="Voi : €/min après 20 min"><input class="input" inputMode="decimal" value={brut.transport.voiMinute} onChange={(e) => maj({ transport: { voiMinute: num(e.currentTarget.value) } })} /></Champ>
         </div>
         <span class="xs muted">Depuis le 1er novembre 2026, un trajet RTM coûte 1,60 € sur carte rechargeable au lieu de 2 €.</span>
+      </section>
+
+      <section class="card">
+        <span class="strong">Temps pro et perso (heures par jour)</span>
+        <span class="small muted">Sert à vérifier que tes tâches tiennent dans la journée. Le temps pro inclut les blocs de la journée type.</span>
+        <div class="grid2">
+          {[['pro', 'semaine', 'Pro en semaine'], ['pro', 'weekend', 'Pro le week-end'], ['perso', 'semaine', 'Perso en semaine'], ['perso', 'weekend', 'Perso le week-end']].map(([t, j, l]) => (
+            <Champ key={t + j} label={l}>
+              <input class="input" inputMode="decimal" value={String(Math.round((tempsDe(brut)[t][j] / 60) * 10) / 10).replace('.', ',')} onChange={(e) => maj({ temps: { [t]: { ...tempsDe(brut)[t], [j]: Math.round(num(e.currentTarget.value) * 60) || tempsDe(brut)[t][j] } } })} />
+            </Champ>
+          ))}
+        </div>
       </section>
 
       <section class="card">

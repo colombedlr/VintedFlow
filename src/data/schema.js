@@ -1,6 +1,6 @@
 // Modèle de données de VintedFlow.
 
-export const COLLECTIONS = ['settings', 'lieux', 'semaines', 'sorties', 'articles', 'mouvements', 'temps', 'marques'];
+export const COLLECTIONS = ['settings', 'lieux', 'semaines', 'sorties', 'articles', 'mouvements', 'temps', 'marques', 'taches'];
 
 export const STATUTS = [
   { id: 'a_completer', label: 'Acheté · à compléter', court: 'À compléter', stock: true },
@@ -102,6 +102,7 @@ export function settingsParDefaut(aujourdhui) {
       ]
     },
     gemini: { modele: 'gemini-3.5-flash-lite' },
+    temps: { pro: { semaine: 420, weekend: 360 }, perso: { semaine: 150, weekend: 240 } },
     exemplesCharges: false
   };
 }

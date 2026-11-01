@@ -227,3 +227,22 @@ export function accesTexte(acces) {
   if (/^(T|M)\d/.test(l) || l.includes('+')) return l;
   return `${m} ${l}`;
 }
+
+// Répartit le budget de la semaine entre les sorties encore à venir (week-end × 1,5).
+// Les sorties en cours ou terminées gardent leur budget ; une sortie annulée après verrouillage aussi.
+export function repartitionBudget(state, lundi, eff, aujourdhui) {
+  const dimanche = addDays(lundi, 6);
+  const sorties = Object.values(state.sorties || {}).filter((so) => so.date >= lundi && so.date <= dimanche);
+  const budgetSemaine = state.semaines?.[lundi]?.budget ?? eff.discipline.budgetHebdo;
+  const fixes = sorties.filter((so) => (so.statut !== 'prevue' && so.statut !== 'annulee') || (so.statut === 'prevue' && so.date < aujourdhui) || (so.statut === 'annulee' && so.budgetPerdu));
+  const modifiables = sorties.filter((so) => so.statut === 'prevue' && so.date >= aujourdhui).sort((a, b) => a.date.localeCompare(b.date));
+  let reste = Math.max(0, budgetSemaine - fixes.reduce((t, so) => t + (so.budget || 0), 0));
+  const poids = (so) => ([0, 6].includes(dayOfWeek(so.date)) ? 1.5 : 1);
+  const total = modifiables.reduce((t, so) => t + poids(so), 0) || 1;
+  const base = reste;
+  return modifiables.map((so, i) => {
+    const b = i === modifiables.length - 1 ? reste : Math.min(reste, Math.max(5, Math.round((base * poids(so)) / total / 5) * 5));
+    reste -= b;
+    return { id: so.id, budget: Math.max(0, b) };
+  });
+}

@@ -93,7 +93,8 @@ export async function exporterExcel(state) {
     ['Lieux', lignesLieux(state)],
     ['Sorties', lignesSorties(state)],
     ['Argent', lignesMouvements(state)],
-    ['Temps', lignesTemps(state)]
+    ['Temps', lignesTemps(state)],
+    ['Tâches', liste(state.taches).map((t) => ({ 'Tâche': t.titre, 'Type': t.type, 'Jour': t.date || '', 'Chaque semaine': (t.jours || []).join(','), 'Heure': t.heure || '', 'Durée (min)': t.duree, 'Importante': t.importante ? 'oui' : '', 'Faite': t.fait ? 'oui' : '' }))]
   ];
   for (const [nom, lignes] of feuilles) {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(lignes.length ? lignes : [{ '': 'Aucune donnée' }]), nom);

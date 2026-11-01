@@ -68,10 +68,20 @@ export function premierDemarrage(store, aujourdhui = isoDate()) {
   }
   store.put('mouvements', { type: 'apport', montant: 1000, date: aujourdhui, note: 'Budget de départ' });
   for (const a of exemples(aujourdhui)) store.put('articles', a);
+  for (const t of tachesExemples(aujourdhui)) store.put('taches', t);
   return true;
 }
 
+export function tachesExemples(aujourdhui) {
+  return [
+    { id: 'tache-ex-1', demo: true, titre: 'Acheter des sacs d’envoi', type: 'pro', date: aujourdhui, duree: 30, importante: true, jours: [], fait: false, faitLe: {} },
+    { id: 'tache-ex-2', demo: true, titre: 'Répondre aux messages Vinted', type: 'pro', jours: [1, 2, 3, 4, 5, 6, 0], debut: aujourdhui, duree: 15, fait: false, faitLe: {} },
+    { id: 'tache-ex-3', demo: true, titre: 'Salle de sport', type: 'perso', jours: [1, 3, 5], debut: aujourdhui, duree: 75, heure: '18:30', fait: false, faitLe: {} }
+  ];
+}
+
 export function effacerExemples(store) {
+  for (const t of Object.values(store.state.taches || {})) if (t.demo) store.remove('taches', t.id);
   for (const a of Object.values(store.state.articles)) {
     if (a.demo) {
       for (const p of a.photoIds || []) store.removePhoto(p);
