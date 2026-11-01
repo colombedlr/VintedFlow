@@ -10,7 +10,11 @@ const ERREURS = {
   'auth/invalid-email': 'E-mail invalide.',
   'auth/network-request-failed': 'Pas de réseau. La première connexion demande Internet ; ensuite l’app marche hors ligne.',
   'auth/admin-restricted-operation': 'La création de compte est fermée sur ce projet.',
-  'auth/too-many-requests': 'Trop d’essais. Attends quelques minutes.'
+  'auth/too-many-requests': 'Trop d’essais. Attends quelques minutes.',
+  'auth/operation-not-allowed': 'La connexion par e-mail n’est pas activée : Firebase → Authentication → Sign-in method → E-mail/Mot de passe.',
+  'auth/configuration-not-found': 'Authentication n’est pas encore activé dans la console Firebase (bouton « Commencer »).',
+  'auth/unauthorized-domain': 'Ce domaine n’est pas autorisé : Firebase → Authentication → Settings → Domaines autorisés.',
+  'auth/api-key-not-valid': 'Clé de configuration Firebase invalide.'
 };
 
 export function Login({ auth, authMod }) {
@@ -29,7 +33,7 @@ export function Login({ auth, authMod }) {
       if (mode === 'connexion') await authMod.signInWithEmailAndPassword(auth, email.trim(), mdp);
       else await authMod.createUserWithEmailAndPassword(auth, email.trim(), mdp);
     } catch (err) {
-      setErreur(ERREURS[err?.code] || 'Connexion impossible. Réessaie.');
+      setErreur(ERREURS[err?.code] || `Connexion impossible (${err?.code || err?.message || 'erreur inconnue'}).`);
     } finally {
       setAttente(false);
     }
