@@ -175,3 +175,26 @@ test('lecture d’une réponse Claude ou ChatGPT', () => {
   assert.equal(lireReponse('bonjour'), null);
   assert.equal(lireReponse('MARQUE: inconnue\nREVENTE: 15-25\nCONTREFAÇON: élevé').risque_contrefacon, 'eleve');
 });
+
+import { lireHorairesOSM, ordreTournee, ouvertMaintenant, distanceKm, typeOSM, minutesPour } from '../src/logic/geo.js';
+test('carte : horaires OSM, ouverture, distance, tournée', () => {
+  const h = lireHorairesOSM('Mo-Fr 10:00-12:30,14:00-18:00; Sa 10:00-18:00; PH off');
+  assert.equal(h.length, 3);
+  assert.deepEqual(h[0].jours, [1, 2, 3, 4, 5]);
+  assert.equal(lireHorairesOSM('sunrise-sunset'), null);
+  assert.deepEqual(lireHorairesOSM('Fr-Mo 09:00-12:00')[0].jours.sort(), [0, 1, 5, 6]);
+  const l = { ouverture: h };
+  assert.equal(ouvertMaintenant(l, '2026-11-02', 11 * 60), true); // lundi 11h
+  assert.equal(ouvertMaintenant(l, '2026-11-02', 13 * 60), false); // pause déjeuner
+  assert.equal(ouvertMaintenant(l, '2026-11-08', 11 * 60), false); // dimanche
+  const timone = { lat: 43.2898, lon: 5.4005 };
+  const vieuxPort = { lat: 43.2951, lon: 5.3745 };
+  const km = distanceKm(timone, vieuxPort);
+  assert.ok(km > 2 && km < 2.4, String(km));
+  assert.ok(minutesPour(km, 'pied') > minutesPour(km, 'velo'));
+  const a = { nom: 'A', lat: 43.30, lon: 5.40 }, b = { nom: 'B', lat: 43.31, lon: 5.40 }, c = { nom: 'C', lat: 43.32, lon: 5.40 };
+  assert.deepEqual(ordreTournee(timone, [c, a, b]).map((x) => x.nom), ['A', 'B', 'C']);
+  assert.equal(typeOSM({ name: 'Emmaüs Pointe Rouge', shop: 'second_hand' }), 'emmaus');
+  assert.equal(typeOSM({ name: 'La Fripe au Kilo', shop: 'clothes' }), 'friperie-kilo');
+  assert.equal(typeOSM({ name: 'Recyclerie du Sud' }), 'ressourcerie');
+});

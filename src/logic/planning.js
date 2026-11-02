@@ -54,7 +54,7 @@ export function coutTournee(lieux, transport) {
   return Math.round((aller + retour + entre) * 100) / 100;
 }
 
-const POIDS_TYPE = { puces: 5, 'vide-grenier': 5, brocante: 4, ressourcerie: 4, emmaus: 3, solidaire: 3, friperie: 2, autre: 1 };
+const POIDS_TYPE = { puces: 5, 'vide-grenier': 5, braderie: 5, brocante: 4, ressourcerie: 4, emmaus: 3, solidaire: 3, 'friperie-kilo': 3, friperie: 2, 'depot-vente': 2, autre: 1 };
 
 function scoreLieu(state, lieu) {
   const arts = liste(state.articles).filter((a) => a.lieuId === lieu.id);
@@ -98,8 +98,8 @@ export function proposerSemaine(state, lundi, eff) {
     const weekend = dow === 0 || dow === 6;
     const tournees = tourneesDuJour(state, iso).filter((t) =>
       weekend
-        ? t.lieux.some((l) => ['puces', 'vide-grenier', 'brocante'].includes(l.type))
-        : t.lieux.some((l) => ['ressourcerie', 'emmaus', 'solidaire', 'friperie'].includes(l.type))
+        ? t.lieux.some((l) => ['puces', 'vide-grenier', 'brocante', 'braderie'].includes(l.type))
+        : t.lieux.some((l) => ['ressourcerie', 'emmaus', 'solidaire', 'friperie', 'friperie-kilo', 'depot-vente'].includes(l.type))
     );
     if (!tournees.length) continue;
     const t = tournees[0];

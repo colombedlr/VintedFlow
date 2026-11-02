@@ -1,6 +1,6 @@
 // Modèle de données de VintedFlow.
 
-export const COLLECTIONS = ['settings', 'lieux', 'semaines', 'sorties', 'articles', 'mouvements', 'temps', 'marques', 'taches'];
+export const COLLECTIONS = ['settings', 'lieux', 'semaines', 'sorties', 'articles', 'mouvements', 'temps', 'marques', 'taches', 'decouvertes'];
 
 export const STATUTS = [
   { id: 'a_completer', label: 'Acheté · à compléter', court: 'À compléter', stock: true },
@@ -88,6 +88,7 @@ export function settingsParDefaut(aujourdhui) {
     delaiEnLigne: 30,
     delaiEnvoiJoursOuvres: 5,
     maison: 'Saint-Pierre / Sainte-Thérèse (Timone)',
+    domicile: null, // { label, lat, lon }
     journee: {
       semaine: [
         { type: 'preparation', debut: '09:00', fin: '11:00' },

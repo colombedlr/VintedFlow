@@ -170,9 +170,12 @@ export const TYPES_LIEU = {
   solidaire: 'Boutique solidaire',
   emmaus: 'Emmaüs',
   friperie: 'Friperie',
-  puces: 'Puces',
+  'friperie-kilo': 'Friperie au kilo',
+  'depot-vente': 'Dépôt-vente',
+  puces: 'Marché aux puces',
   brocante: 'Brocante',
   'vide-grenier': 'Vide-grenier',
+  braderie: 'Braderie',
   autre: 'Autre'
 };
 

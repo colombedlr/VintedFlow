@@ -9,7 +9,7 @@ import { normaliser } from '../../data/marques.js';
 const JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
 export function horairesTexte(l) {
-  if (!l.ouverture?.length) return 'Horaires à trouver';
+  if (!l.ouverture?.length) return l.horairesTexte || 'Horaires à trouver';
   return l.ouverture
     .map((o) => {
       if (o.date) return `le ${new Date(o.date + 'T12:00').toLocaleDateString('fr-FR')} ${o.debut || ''}–${o.fin || ''}`;
@@ -42,7 +42,10 @@ export function Lieux() {
           <span class="sur">Depuis Saint-Pierre / Sainte-Thérèse</span>
           <h1>Lieux</h1>
         </div>
-        <button class="btn s primary" onClick={ajouter}>+ Lieu</button>
+        <span class="row" style="gap:8px">
+          <a class="btn s ghost" href="#/carte">Carte</a>
+          <button class="btn s primary" onClick={ajouter}>+ Lieu</button>
+        </span>
       </header>
       <label class="search">
         <IconLoupe size={20} />

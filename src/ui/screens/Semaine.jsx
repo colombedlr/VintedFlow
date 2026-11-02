@@ -50,7 +50,10 @@ export function Semaine() {
           <span class="sur">Du {fmtCourt(lundi)} au {fmtCourt(sem.dimanche)}</span>
           <h1>Semaine</h1>
         </div>
-        <a class="small strong" href="#/lieux" style="padding:10px 0">Lieux ({nbLieux})</a>
+        <span class="row" style="gap:14px">
+          <a class="small strong" href="#/carte" style="padding:10px 0">Carte</a>
+          <a class="small strong" href="#/lieux" style="padding:10px 0">Lieux ({nbLieux})</a>
+        </span>
       </header>
 
       <div class="chips" role="group" aria-label="Choix de la semaine">
