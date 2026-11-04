@@ -116,3 +116,26 @@ export function nouvelId() {
 export function maintenant() {
   return new Date().toISOString();
 }
+
+export const ORIGINES = {
+  sortie: { label: 'Sortie', aide: 'Acheté pendant une sortie' },
+  ancien: { label: 'Ancien stock', aide: 'Acheté lors de brocantes passées' },
+  dressing: { label: 'Dressing perso', aide: 'À moi, colle au style de la boutique · coût 0 €' },
+  trouvaille: { label: 'Trouvaille ponctuelle', aide: 'Hors sortie : balade, don, coup de chance' }
+};
+
+export const PRIX_STATUTS = { exact: 'Prix exact', estime: 'Prix estimé', inconnu: 'Prix inconnu' };
+
+export const COMPTES = { particulier: 'Compte particulier', pro: 'Compte Pro' };
+
+export const TAGS_STYLE = [
+  'baggy', 'taille basse', 'flare', 'cargo', 'logo', 'monogramme', 'strass', 'velours', 'satin', 'résille',
+  'crop top', 'dos nu', 'plateforme', 'sportswear', 'cuir', 'denim', 'imprimé', 'rose', 'argenté', 'brodé'
+];
+
+export const TAILLES_RAPIDES = ['XS', 'S', 'M', 'L', 'XL', '34', '36', '38', '40', '42', 'TU'];
+
+export function compteParDefaut(origine, s) {
+  if (origine === 'dressing') return 'particulier';
+  return s?.statut === 'micro' ? 'pro' : 'particulier';
+}

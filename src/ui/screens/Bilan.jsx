@@ -112,15 +112,22 @@ export function Bilan() {
       )}
 
       <section class="card tight" aria-label="Détail du mois">
-        <span class="strong">Détail du mois</span>
+        <span class="strong">Activité achat-revente</span>
         <div class="ligne"><span>Ventes encaissées</span><span>{fmtE(arr(obj.ca))}</span></div>
         <div class="ligne"><span>Coût d’achat des pièces vendues</span><span>− {fmtE(arr(obj.coutVendus))}</span></div>
         <div class="ligne"><span>Emballages</span><span>− {fmtE(Math.round(obj.emballages * 10) / 10)}</span></div>
         <div class="ligne"><span>Transport des sorties</span><span>− {fmtE(Math.round(obj.transport * 10) / 10)}</span></div>
         <div class="ligne"><span>Abonnement Voi et autres frais</span><span>− {fmtE(Math.round((obj.fixes + obj.depenses) * 10) / 10)}</span></div>
         {s.statut === 'micro' && <div class="ligne"><span>Cotisations URSSAF</span><span>− {fmtE(arr(obj.cotisations))}</span></div>}
+        <div class="ligne"><span class="strong" style="color:var(--ink)">Bénéfice de l’activité</span><span>{fmtE(arr(obj.beneficeActivite))}</span></div>
         <div class="sep" />
-        <div class="ligne"><span class="strong" style="color:var(--ink)">Bénéfice net</span><span>{fmtE(arr(obj.benefice))}</span></div>
+        <span class="strong">Dressing perso</span>
+        <div class="ligne"><span>{obj.nbDressing} vente{obj.nbDressing > 1 ? 's' : ''} · hors cotisations</span><span>{fmtE(arr(obj.dressingVentes))}</span></div>
+        <div class="ligne"><span>Gain (après emballages)</span><span>{fmtE(arr(obj.dressingGain))}</span></div>
+        <div class="sep" />
+        <div class="ligne"><span class="strong" style="color:var(--ink)">Argent gagné du mois</span><span>{fmtE(arr(obj.benefice))}</span></div>
+        <div class="ligne"><span>Achats du mois (sorties + trouvailles)</span><span>{fmtE(arr(obj.achats))}</span></div>
+        <span class="xs muted">Ancien stock à prix inconnu et dressing perso : exclus de tes moyennes et de la rentabilité des lieux.</span>
       </section>
 
       {feuille && <MouvementFeuille type={feuille} onClose={() => setFeuille(null)} />}

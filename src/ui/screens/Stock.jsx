@@ -6,6 +6,9 @@ import { fmtE } from '../../logic/rules.js';
 import { fmtCourt, isoDate, diffDays } from '../../logic/dates.js';
 import { changerStatut, enregistrerVente, remettreEnLigne, sortirDuStock, supprimerArticle } from '../actions.js';
 import { compresserPhoto } from '../../util/photo.js';
+import { ORIGINES, PRIX_STATUTS, COMPTES, compteParDefaut } from '../../data/schema.js';
+import { ChoixTags, RappelCompte } from './AjoutArticle.jsx';
+import { origineDe, estExcluStats } from '../../logic/calc.js';
 
 function useLarge() {
   const mq = typeof window !== 'undefined' ? window.matchMedia('(min-width: 900px)') : null;
@@ -110,7 +113,10 @@ export function Stock({ statut }) {
           <span class="sur">{enStock.length} pièces · {fmtE(valeur)} au prix d’achat</span>
           <h1>{statut ? libelle(statut, s) : 'Stock'}</h1>
         </div>
-        <a class="small strong" href="#/marques" style="padding:10px 0">Marques</a>
+        <span class="row" style="gap:12px">
+          <a class="small strong" href="#/marques" style="padding:10px 0">Marques</a>
+          <a class="btn s primary" href="#/ajouter-article">+ Article</a>
+        </span>
       </header>
       {statut && <a class="retour" href="#/stock"><IconRetour size={20} />Tout le stock</a>}
       <label class="search">
@@ -296,6 +302,8 @@ export function ArticleFiche({ id, compact = false }) {
             <span class="pill accent">{STATUT[a.statut]?.label}</span>
             {a.horsRegle && <span class="pill red">Hors règle</span>}
             {a.demo && <span class="pill">Exemple</span>}
+            {origineDe(a) !== 'sortie' && <span class="pill">{ORIGINES[origineDe(a)].label}</span>}
+            {estExcluStats(a) && <span class="pill">Hors stats</span>}
             {a.lotId && <span class="pill">Lot</span>}
           </span>
           <input class="input" style="font-size:19px;font-weight:700;border-color:transparent;padding-left:0;background:transparent" value={a.titre || ''} placeholder="Titre de l’article" aria-label="Titre" onChange={(e) => maj({ titre: e.currentTarget.value })} />
@@ -360,6 +368,27 @@ export function ArticleFiche({ id, compact = false }) {
         {a.prixVente != null && (
           <Champ label="Prix de vente (€)"><input class="input" inputMode="decimal" value={a.prixVente ?? ''} onChange={(e) => maj({ prixVente: num(e.currentTarget.value) })} /></Champ>
         )}
+        <ChoixTags tags={a.tags || []} onChange={(tags) => maj({ tags })} />
+        <div class="grid2">
+          <Champ label="Origine">
+            <select class="input" value={origineDe(a)} onChange={(e) => { const o = e.currentTarget.value; maj({ origine: o, ...(o === 'dressing' ? { cout: 0, compte: 'particulier' } : {}) }); }}>
+              {Object.entries(ORIGINES).map(([k, o]) => <option key={k} value={k}>{o.label}</option>)}
+            </select>
+          </Champ>
+          <Champ label="Compte Vinted">
+            <select class="input" value={a.compte || compteParDefaut(origineDe(a), s)} onChange={(e) => maj({ compte: e.currentTarget.value })}>
+              {Object.entries(COMPTES).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+            </select>
+          </Champ>
+        </div>
+        {origineDe(a) === 'ancien' && (
+          <Champ label="Prix d’achat">
+            <select class="input" value={a.prixStatut || 'exact'} onChange={(e) => maj({ prixStatut: e.currentTarget.value })}>
+              {Object.entries(PRIX_STATUTS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+            </select>
+          </Champ>
+        )}
+        <RappelCompte origine={origineDe(a)} compte={a.compte || compteParDefaut(origineDe(a), s)} />
         <Champ label="Notes"><textarea class="input" value={a.notes || ''} onChange={(e) => maj({ notes: e.currentTarget.value })} /></Champ>
       </div>
 
@@ -395,6 +424,8 @@ export function VenteFeuille({ a, onClose }) {
   return (
     <Feuille titre="Vente" onClose={onClose}>
       <span class="small muted">{a.titre}</span>
+      <RappelCompte origine={origineDe(a)} compte={a.compte || 'particulier'} />
+      {origineDe(a) === 'dressing' && <span class="xs muted">Vente du dressing perso : comptée dans ton argent du mois, pas dans le chiffre d’affaires soumis aux cotisations.</span>}
       <Champ label="Prix de vente (€)"><input class="input" inputMode="decimal" value={prix} onInput={(e) => setPrix(e.currentTarget.value)} /></Champ>
       <Champ label="Date de la vente"><input class="input" type="date" value={jour} max={today} onInput={(e) => setJour(e.currentTarget.value)} /></Champ>
       <button

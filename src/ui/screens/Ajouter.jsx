@@ -4,6 +4,7 @@ import { liste, sortieEnCours, rechercherArticles, chercherMarques } from '../..
 import { MouvementFeuille } from './Bilan.jsx';
 import { VenteFeuille } from './Stock.jsx';
 import { EditionTache } from './Taches.jsx';
+import { compteParDefaut } from '../../data/schema.js';
 import { fmtE } from '../../logic/rules.js';
 
 export function MenuAjouter({ onClose }) {
@@ -24,8 +25,14 @@ export function MenuAjouter({ onClose }) {
   if (vue === 'horsregle') return <HorsRegle onClose={onClose} />;
   if (vue === 'tache') return <EditionTache init={{ type: 'pro', date: today, duree: 30 }} onClose={onClose} />;
 
+  const principaux = [
+    enCours
+      ? { id: 'achat', titre: 'Achat en sortie', st: 'Vérifier une pièce · budget et sacs suivis', go: () => go(`/verifier?sortie=${enCours.id}`) }
+      : null,
+    { id: 'article', titre: 'Ajouter un article', st: 'Ancien stock, dressing perso, trouvaille · hors sortie', go: () => go('/ajouter-article') }
+  ].filter(Boolean);
   const options = [
-    { id: 'verifier', titre: enCours ? 'Vérifier et acheter une pièce' : 'Vérifier une pièce', st: enCours ? 'Sortie en cours : budget et sacs suivis' : 'Le feu vert, orange ou rouge', go: () => go(enCours ? `/verifier?sortie=${enCours.id}` : '/verifier') },
+    ...(enCours ? [] : [{ id: 'verifier', titre: 'Vérifier une pièce', st: 'Le feu vert, orange ou rouge', go: () => go('/verifier') }]),
     { id: 'tache', titre: 'Tâche perso ou pro', st: 'Placée dans ta journée, avec sa durée', go: () => setVue('tache') },
     { id: 'vente', titre: 'Enregistrer une vente', st: 'Lance le délai d’envoi de 5 jours ouvrés', go: () => setVue('vente') },
     { id: 'temps', titre: 'Temps travaillé', st: 'Pour ton bénéfice par heure', go: () => setVue('temps') },
@@ -39,6 +46,15 @@ export function MenuAjouter({ onClose }) {
 
   return (
     <Feuille titre="Ajouter" onClose={onClose}>
+      <div class={principaux.length > 1 ? 'grid2' : 'col'}>
+        {principaux.map((o) => (
+          <button key={o.id} class="btn primary" style="min-height:84px;flex-direction:column;align-items:flex-start;text-align:left;gap:4px;padding:12px 16px" onClick={o.go}>
+            <span style="font-size:17px">{o.titre}</span>
+            <span style="font-size:12px;font-weight:500;opacity:.85">{o.st}</span>
+          </button>
+        ))}
+      </div>
+      <h3 class="section-t">Autre</h3>
       {options.map((o) => (
         <button key={o.id} class="item" onClick={o.go} style={o.id === 'horsregle' ? 'border:2px solid var(--red)' : ''}>
           <span class="col grow">
@@ -76,7 +92,7 @@ function ChoixArticle({ onClose, onChoix }) {
 }
 
 function HorsRegle({ onClose }) {
-  const { store, state, today, toast } = useApp();
+  const { store, state, s, today, toast } = useApp();
   const [f, setF] = useState({ titre: '', marque: '', cout: '', revente: '', lieuId: '', jour: today, raison: '' });
   const maj = (k) => (e) => setF({ ...f, [k]: e.currentTarget.value });
   const lieux = liste(state.lieux).sort((a, b) => a.nom.localeCompare(b.nom));
@@ -94,6 +110,8 @@ function HorsRegle({ onClose }) {
       achatAt: at,
       lieuId: f.lieuId || null,
       horsRegle: true,
+      origine: 'sortie',
+      compte: compteParDefaut('sortie', s),
       notes: f.raison ? `Hors règle : ${f.raison}` : 'Hors règle',
       bac: '',
       photoIds: [],

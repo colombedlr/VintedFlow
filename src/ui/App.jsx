@@ -15,6 +15,7 @@ import { Reglages } from './screens/Reglages.jsx';
 import { MenuAjouter } from './screens/Ajouter.jsx';
 import { Taches } from './screens/Taches.jsx';
 import { Carte } from './screens/Carte.jsx';
+import { AjoutArticle, Inventaire } from './screens/AjoutArticle.jsx';
 
 export function EtatSynchro({ store }) {
   const st = store.status;
@@ -39,7 +40,7 @@ const ONGLETS = [
 
 function ongletActif(segs) {
   const s = segs[0] || 'aujourdhui';
-  if (['stock', 'article', 'marques'].includes(s)) return 'stock';
+  if (['stock', 'article', 'marques', 'ajouter-article', 'inventaire'].includes(s)) return 'stock';
   if (['semaine', 'lieux', 'lieu'].includes(s)) return 'semaine';
   if (s === 'carte') return 'carte';
   if (['bilan', 'reglages'].includes(s)) return 'bilan';
@@ -129,6 +130,8 @@ export function App({ store, essai = false, sansConfig = false }) {
     case 'reglages': contenu = <Reglages />; break;
     case 'taches': contenu = <Taches />; break;
     case 'carte': contenu = <Carte />; break;
+    case 'ajouter-article': contenu = <AjoutArticle />; break;
+    case 'inventaire': contenu = <Inventaire />; break;
     default: contenu = <Aujourdhui />;
   }
 

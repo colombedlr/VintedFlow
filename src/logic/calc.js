@@ -20,6 +20,15 @@ export function settingsEffectifs(s, aujourdhui) {
 }
 
 export const estEnStock = (a) => STATUTS_STOCK.includes(a.statut);
+// Origine d'un article : sortie (par défaut), ancien stock, dressing perso, trouvaille ponctuelle.
+export const origineDe = (a) => a.origine || 'sortie';
+export const estDressing = (a) => origineDe(a) === 'dressing';
+// Exclu des moyennes et de la rentabilité : dressing perso, ancien stock à prix inconnu.
+export const estExcluStats = (a) => estDressing(a) || (origineDe(a) === 'ancien' && a.prixStatut === 'inconnu');
+// Compte dans le budget de la semaine (et donc des sorties) : seulement les achats en sortie.
+export const compteBudget = (a) => origineDe(a) === 'sortie';
+// Argent réellement sorti de la caisse depuis le début : sortie et trouvaille (l'ancien stock a été payé avant).
+export const compteCaisse = (a) => ['sortie', 'trouvaille'].includes(origineDe(a));
 export const estVenteComptee = (a) => !!a.venduAt && ['vendu', 'envoye', 'finalise'].includes(a.statut);
 const jourDe = (isoDateTime) => (isoDateTime ? isoDate(new Date(isoDateTime)) : null);
 
@@ -68,7 +77,7 @@ export function semaineInfo(state, lundi, eff) {
   const alloue = toutes.filter((so) => so.statut !== 'annulee' || so.budgetPerdu).reduce((t, so) => t + (so.budget || 0), 0);
   const dimanche = addDays(lundi, 6);
   const depense = liste(state.articles)
-    .filter((a) => a.achatAt && jourDe(a.achatAt) >= lundi && jourDe(a.achatAt) <= dimanche)
+    .filter((a) => compteBudget(a) && a.achatAt && jourDe(a.achatAt) >= lundi && jourDe(a.achatAt) <= dimanche)
     .reduce((t, a) => t + (a.cout || 0), 0);
   const transport = sorties.reduce((t, so) => t + (so.transportCout || so.transportPrevu || 0), 0);
   return {
@@ -121,7 +130,7 @@ export function tresorerie(state, aujourdhui) {
   let valeurStock = 0;
   let nbStock = 0;
   for (const a of liste(state.articles)) {
-    caisse -= a.cout || 0;
+    if (compteCaisse(a)) caisse -= a.cout || 0;
     if (estEnStock(a)) { valeurStock += a.cout || 0; nbStock++; }
     if (a.venduAt && a.statut !== 'retour' && a.statut !== 'sorti') caisse -= emballageDe(a, s);
     if (a.statut === 'vendu' || a.statut === 'envoye') { attente += a.prixVente || 0; nbAttente++; }
@@ -147,16 +156,27 @@ export function ventesDuMois(state, mois) {
   return liste(state.articles).filter((a) => estVenteComptee(a) && jourDe(a.venduAt).startsWith(mois));
 }
 
+// Chiffre d'affaires de l'activité (soumis aux cotisations) : hors dressing perso.
 export function chiffreAffairesMois(state, mois) {
-  return ventesDuMois(state, mois).reduce((t, a) => t + (a.prixVente || 0), 0);
+  return ventesDuMois(state, mois).filter((a) => !estDressing(a)).reduce((t, a) => t + (a.prixVente || 0), 0);
+}
+
+export function achatsDuMois(state, mois) {
+  return liste(state.articles)
+    .filter((a) => compteCaisse(a) && a.achatAt && jourDe(a.achatAt).startsWith(mois))
+    .reduce((t, a) => t + (a.cout || 0), 0);
 }
 
 export function beneficeMois(state, mois, aujourdhui) {
   const s = settingsEffectifs(settingsDe(state), aujourdhui);
-  const ventes = ventesDuMois(state, mois);
+  const toutes = ventesDuMois(state, mois);
+  const ventes = toutes.filter((a) => !estDressing(a));
+  const dressing = toutes.filter(estDressing);
   const ca = ventes.reduce((t, a) => t + (a.prixVente || 0), 0);
   const coutVendus = ventes.reduce((t, a) => t + (a.cout || 0), 0);
   const emballages = ventes.reduce((t, a) => t + emballageDe(a, s), 0);
+  const dressingVentes = dressing.reduce((t, a) => t + (a.prixVente || 0), 0);
+  const dressingGain = dressing.reduce((t, a) => t + (a.prixVente || 0) - emballageDe(a, s), 0);
   const transport = liste(state.sorties)
     .filter((so) => so.date?.startsWith(mois))
     .reduce((t, so) => t + (so.transportCout || 0), 0);
@@ -165,14 +185,20 @@ export function beneficeMois(state, mois, aujourdhui) {
     .reduce((t, m) => t + (Number(m.montant) || 0), 0);
   const fixes = !s.creeLe || mois >= s.creeLe.slice(0, 7) ? s.transport?.voiAbonnement || 0 : 0;
   const cotisations = cotisationsTaux(s) * ca;
-  const benefice = ca - coutVendus - emballages - transport - depenses - fixes - cotisations;
-  return { ventes, nb: ventes.length, ca, coutVendus, emballages, transport, depenses, fixes, cotisations, benefice };
+  const beneficeActivite = ca - coutVendus - emballages - transport - depenses - fixes - cotisations;
+  // L'argent gagné du mois compte aussi le dressing perso (hors cotisations).
+  const benefice = beneficeActivite + dressingGain;
+  return {
+    ventes, nb: ventes.length, ca, coutVendus, emballages, transport, depenses, fixes, cotisations,
+    beneficeActivite, dressing, nbDressing: dressing.length, dressingVentes, dressingGain, benefice,
+    achats: achatsDuMois(state, mois)
+  };
 }
 
 // Moyennes réelles après 3 semaines et au moins 10 ventes, sinon hypothèses du brief.
 export function moyennes(state, aujourdhui) {
   const s = settingsEffectifs(settingsDe(state), aujourdhui);
-  const ventes = liste(state.articles).filter(estVenteComptee);
+  const ventes = liste(state.articles).filter((a) => estVenteComptee(a) && !estExcluStats(a));
   const assezVieux = s.creeLe && diffDays(s.creeLe, aujourdhui) >= 21;
   if (assezVieux && ventes.length >= 10) {
     const achat = ventes.reduce((t, a) => t + (a.cout || 0), 0) / ventes.length;
@@ -239,7 +265,7 @@ export function rentabiliteParLieu(state, aujourdhui) {
   const lieux = liste(state.lieux);
   for (const l of lieux) res[l.id] = { lieu: l, achetes: 0, vendus: 0, profit: 0, heures: 0, transport: 0, sorties: 0 };
   for (const a of liste(state.articles)) {
-    if (!a.lieuId || !res[a.lieuId]) continue;
+    if (!a.lieuId || !res[a.lieuId] || estExcluStats(a)) continue;
     res[a.lieuId].achetes++;
     if (estVenteComptee(a)) { res[a.lieuId].vendus++; res[a.lieuId].profit += margeArticle(a, s); }
   }
@@ -269,7 +295,7 @@ function groupe(state, cle, aujourdhui) {
     const k = normaliser(nom);
     const r = (res[k] ||= { nom, n: 0, stock: 0, total: 0, profit: 0, min: Infinity, max: 0, delais: [] });
     if (estEnStock(a)) r.stock++;
-    if (!estVenteComptee(a)) continue;
+    if (!estVenteComptee(a) || estExcluStats(a)) continue;
     r.n++;
     r.total += a.prixVente || 0;
     r.profit += margeArticle(a, s);
@@ -365,7 +391,7 @@ export function rechercherArticles(state, q) {
   return liste(state.articles)
     .filter((a) => {
       const bac = a.bac != null && a.bac !== '' ? `bac ${a.bac} ${a.bac}` : '';
-      const txt = normaliser([a.titre, a.marque, a.taille, a.categorie, a.etat, a.notes, bac].join(' '));
+      const txt = normaliser([a.titre, a.marque, a.taille, a.categorie, a.etat, a.notes, bac, ...(a.tags || [])].join(' '));
       return mots.every((m) => txt.includes(m));
     })
     .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));

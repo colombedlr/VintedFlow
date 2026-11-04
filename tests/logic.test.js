@@ -198,3 +198,29 @@ test('carte : horaires OSM, ouverture, distance, tournée', () => {
   assert.equal(typeOSM({ name: 'La Fripe au Kilo', shop: 'clothes' }), 'friperie-kilo');
   assert.equal(typeOSM({ name: 'Recyclerie du Sud' }), 'ressourcerie');
 });
+
+import { estExcluStats } from '../src/logic/calc.js';
+test('origines : budget, trésorerie, cotisations, stats', () => {
+  const today = '2026-11-10';
+  const st = etat(today);
+  const s = st.settings.main;
+  s.statut = 'micro';
+  const avant = tresorerie(st, today);
+  const semAvant = semaineInfo(st, mondayOf(today), s).depense;
+  st.articles.anc = { id: 'anc', origine: 'ancien', prixStatut: 'inconnu', cout: 0, statut: 'a_completer' };
+  st.articles.tr = { id: 'tr', origine: 'trouvaille', cout: 5, statut: 'a_completer', achatAt: new Date('2026-11-10T12:00:00').toISOString() };
+  st.articles.dr = { id: 'dr', origine: 'dressing', cout: 0, statut: 'vendu', prixVente: 30, venduAt: new Date('2026-11-09T12:00:00').toISOString() };
+  // Pas de consommation du budget de semaine
+  assert.equal(semaineInfo(st, mondayOf(today), s).depense, semAvant);
+  // La trouvaille sort de la caisse (5 €)
+  const apres = tresorerie(st, today);
+  assert.equal(Math.round((avant.caisse - apres.caisse) * 100), 500 + 50); // + emballage du dressing vendu
+  // Le dressing compte dans l'argent du mois mais pas dans le CA soumis aux cotisations
+  const b = beneficeMois(st, '2026-11', today);
+  assert.equal(b.dressingVentes, 30);
+  assert.equal(b.ca, beneficeMois({ ...st, articles: Object.fromEntries(Object.entries(st.articles).filter(([k]) => k !== 'dr')) }, '2026-11', today).ca);
+  assert.equal(Math.round((b.benefice - b.beneficeActivite) * 10) / 10, 29.5);
+  assert.equal(estExcluStats(st.articles.anc), true);
+  assert.equal(estExcluStats(st.articles.dr), true);
+  assert.equal(estExcluStats(st.articles.tr), false);
+});
