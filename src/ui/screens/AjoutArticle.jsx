@@ -68,20 +68,28 @@ export function AjoutArticle() {
     origine: 'ancien', titre: '', marque: '', categorie: '', taille: '', etat: '', cout: '', prixStatut: 'exact',
     revente: '', lieuId: '', date: '', bac: '', notes: '', tags: [], compte: compteParDefaut('ancien', s)
   });
-  const [photo, setPhoto] = useState(null);
+  const [photos, setPhotos] = useState([]);
   const [suggest, setSuggest] = useState(false);
   const fileRef = useRef(null);
+  const galerieRef = useRef(null);
   const maj = (k) => (e) => setF({ ...f, [k]: e.currentTarget.value });
   const lieux = liste(state.lieux).sort((a, b) => a.nom.localeCompare(b.nom));
   const marques = suggest && f.marque.length > 1 ? chercherMarques(state, f.marque).slice(0, 5) : [];
 
   const changerOrigine = (o) => setF({ ...f, origine: o, compte: compteParDefaut(o, s), prixStatut: o === 'ancien' ? f.prixStatut : 'exact', cout: o === 'dressing' ? '0' : f.cout === '0' ? '' : f.cout });
 
-  const surPhoto = async (e) => {
-    const file = e.currentTarget.files?.[0];
+  const surPhotos = async (e) => {
+    const fichiers = [...(e.currentTarget.files || [])].slice(0, 8);
     e.currentTarget.value = '';
-    if (!file) return;
-    setPhoto(await compresserPhoto(file));
+    const comp = [];
+    for (const f of fichiers) {
+      try {
+        comp.push(await compresserPhoto(f));
+      } catch {
+        toast('Une photo est illisible.');
+      }
+    }
+    setPhotos((ps) => [...ps, ...comp].slice(0, 8));
   };
 
   const enregistrer = (encore) => {
@@ -89,12 +97,11 @@ export function AjoutArticle() {
     if (f.origine === 'trouvaille' && cout == null) return toast('Indique le prix payé pour la trouvaille.');
     if (f.origine === 'ancien' && f.prixStatut !== 'inconnu' && cout == null) return toast('Indique le prix, ou choisis « Prix inconnu ».');
     const at = f.date ? new Date(`${f.date}T12:00:00`).toISOString() : f.origine === 'ancien' ? null : new Date().toISOString();
-    const photoIds = [];
-    if (photo) {
+    const photoIds = photos.map((ph) => {
       const pid = nouvelId();
-      store.putPhoto(pid, photo.photo, { role: 'piece' });
-      photoIds.push(pid);
-    }
+      store.putPhoto(pid, ph.photo, { role: 'piece' });
+      return pid;
+    });
     const statut = f.titre || f.categorie ? 'a_preparer' : 'a_completer';
     store.put('articles', {
       origine: f.origine,
@@ -113,14 +120,14 @@ export function AjoutArticle() {
       lieuId: f.lieuId || null,
       achatAt: at,
       photoIds,
-      thumb: photo?.vignette || null,
+      thumb: photos[0]?.vignette || null,
       statut,
       historique: [{ statut, at: new Date().toISOString() }]
     });
     toast(`Ajouté · ${ORIGINES[f.origine].label}`);
     if (encore) {
       setF({ ...f, titre: '', marque: '', taille: '', etat: '', cout: f.origine === 'dressing' ? '0' : '', revente: '', notes: '', tags: [] });
-      setPhoto(null);
+      setPhotos([]);
       scrollTo(0, 0);
     } else aller('/stock');
   };
@@ -143,15 +150,30 @@ export function AjoutArticle() {
       <section class="card">
         <div class="row">
           <button type="button" class="col" style="background:none;border:0;padding:0;cursor:pointer;color:inherit;width:96px;flex-shrink:0;gap:4px" onClick={() => fileRef.current?.click()} aria-label="Prendre une photo">
-            {photo ? <img src={photo.vignette} alt="" style="width:96px;height:96px;border-radius:16px;object-fit:cover" /> : <span class="thumb" style="width:96px;height:96px;border-radius:16px"><IconCamera size={28} /></span>}
-            <span class="xs strong" style="text-align:center">{photo ? 'Changer' : 'Photo'}</span>
+            {photos[0] ? <img src={photos[0].vignette} alt="" style="width:96px;height:96px;border-radius:16px;object-fit:cover" /> : <span class="thumb" style="width:96px;height:96px;border-radius:16px"><IconCamera size={28} /></span>}
+            <span class="xs strong" style="text-align:center">{photos.length ? `${photos.length} photo${photos.length > 1 ? 's' : ''}` : 'Photo'}</span>
           </button>
-          <input ref={fileRef} type="file" accept="image/*" capture="environment" style="display:none" onChange={surPhoto} />
+          <input ref={fileRef} type="file" accept="image/*" capture="environment" style="display:none" onChange={surPhotos} />
+          <input ref={galerieRef} type="file" accept="image/*" multiple style="display:none" onChange={surPhotos} />
           <div class="col grow" style="gap:8px">
             <Champ label="Pièce"><input class="input" value={f.titre} placeholder="Jean taille basse…" onInput={maj('titre')} /></Champ>
             <Champ label="Marque"><input class="input" value={f.marque} autocomplete="off" onInput={(e) => { setF({ ...f, marque: e.currentTarget.value }); setSuggest(true); }} /></Champ>
           </div>
         </div>
+        <div class="grid2">
+          <button type="button" class="btn s ghost" onClick={() => fileRef.current?.click()}><IconCamera size={18} />Appareil photo</button>
+          <button type="button" class="btn s ghost" onClick={() => galerieRef.current?.click()}>Depuis la galerie</button>
+        </div>
+        {photos.length > 1 && (
+          <div class="row wrap" style="gap:6px">
+            {photos.map((ph, i) => (
+              <button key={i} type="button" aria-label={`Retirer la photo ${i + 1}`} onClick={() => setPhotos(photos.filter((_, j) => j !== i))} style="padding:0;border:0;background:none;cursor:pointer">
+                <img src={ph.vignette} alt="" style="width:52px;height:52px;border-radius:10px;object-fit:cover" />
+              </button>
+            ))}
+            <span class="xs muted">Touche une photo pour la retirer.</span>
+          </div>
+        )}
         {marques.length > 0 && marques[0].nom !== f.marque && (
           <div class="chips">{marques.map((m) => <button key={m.nom} type="button" class="chip" style="font-size:14px" onClick={() => { setF({ ...f, marque: m.nom }); setSuggest(false); }}>{m.nom}</button>)}</div>
         )}
@@ -224,6 +246,7 @@ export function Inventaire() {
   const [origine, setOrigine] = useState('ancien');
   const [prixStatut, setPrixStatut] = useState('inconnu');
   const [photo, setPhoto] = useState(null);
+  const [serie, setSerie] = useState(false);
   const [categorie, setCategorie] = useState('');
   const [taille, setTaille] = useState('');
   const [bac, setBac] = useState('');
@@ -231,6 +254,8 @@ export function Inventaire() {
   const [compteur, setCompteur] = useState(0);
   const [derniers, setDerniers] = useState([]);
   const fileRef = useRef(null);
+  const galerieRef = useRef(null);
+  const serieRef = useRef(null);
   const tailleRef = useRef(null);
 
   const surPhoto = async (e) => {
@@ -240,31 +265,59 @@ export function Inventaire() {
     setPhoto(await compresserPhoto(file));
   };
 
-  const suivant = () => {
-    if (!photo && !categorie) return toast('Au moins une photo ou une catégorie.');
+  const creer = (ph, cat, tai) => {
     const photoIds = [];
-    if (photo) {
+    if (ph) {
       const pid = nouvelId();
-      store.putPhoto(pid, photo.photo, { role: 'piece' });
+      store.putPhoto(pid, ph.photo, { role: 'piece' });
       photoIds.push(pid);
     }
     const c = origine === 'dressing' ? 0 : num(cout);
     store.put('articles', {
       origine,
       prixStatut: origine === 'ancien' ? (c == null ? 'inconnu' : prixStatut === 'inconnu' ? 'estime' : prixStatut) : 'exact',
-      titre: categorie || 'Pièce à compléter',
-      categorie,
-      taille,
+      titre: cat || 'Pièce à compléter',
+      categorie: cat,
+      taille: tai,
       bac: bac.trim(),
       cout: c ?? 0,
       tags: [],
       compte: compteParDefaut(origine, s),
       achatAt: origine === 'ancien' ? null : new Date().toISOString(),
       photoIds,
-      thumb: photo?.vignette || null,
+      thumb: ph?.vignette || null,
       statut: 'a_completer',
       historique: [{ statut: 'a_completer', at: new Date().toISOString() }]
     });
+  };
+
+  // Une photo de la galerie = un article, avec la catégorie et le bac choisis.
+  const importerSerie = async (e) => {
+    const fichiers = [...(e.currentTarget.files || [])].slice(0, 60);
+    e.currentTarget.value = '';
+    if (!fichiers.length) return;
+    setSerie(true);
+    let n = 0;
+    const vignettes = [];
+    for (const f of fichiers) {
+      try {
+        const ph = await compresserPhoto(f);
+        creer(ph, categorie, '');
+        vignettes.push({ thumb: ph.vignette, categorie, taille: '', bac });
+        n++;
+      } catch {
+        /* photo illisible : on passe */
+      }
+    }
+    setSerie(false);
+    setCompteur((c) => c + n);
+    setDerniers((d) => [...vignettes.reverse(), ...d].slice(0, 6));
+    toast(`${n} article${n > 1 ? 's' : ''} créé${n > 1 ? 's' : ''} · à compléter plus tard.`);
+  };
+
+  const suivant = () => {
+    if (!photo && !categorie) return toast('Au moins une photo ou une catégorie.');
+    creer(photo, categorie, taille);
     setCompteur(compteur + 1);
     setDerniers([{ thumb: photo?.vignette, categorie, taille, bac }, ...derniers].slice(0, 6));
     setPhoto(null);
@@ -290,6 +343,16 @@ export function Inventaire() {
           <span class="strong">{photo ? 'Reprendre la photo' : '1. Photo'}</span>
         </button>
         <input ref={fileRef} type="file" accept="image/*" capture="environment" style="display:none" onChange={surPhoto} />
+        <input ref={galerieRef} type="file" accept="image/*" style="display:none" onChange={surPhoto} />
+        <input ref={serieRef} type="file" accept="image/*" multiple style="display:none" onChange={importerSerie} />
+        <div class="grid2">
+          <button type="button" class="btn s ghost" onClick={() => fileRef.current?.click()}><IconCamera size={18} />Appareil photo</button>
+          <button type="button" class="btn s ghost" onClick={() => galerieRef.current?.click()}>Depuis la galerie</button>
+        </div>
+        <button type="button" class="btn s dark" disabled={serie} onClick={() => serieRef.current?.click()}>
+          {serie ? 'Import en cours…' : 'Importer une série depuis la galerie (1 photo = 1 article)'}
+        </button>
+        <span class="xs muted">La série prend la catégorie et le bac sélectionnés ci-dessous. Choisis-les avant d’importer.</span>
       </section>
 
       <section class="card" aria-label="2. Catégorie">

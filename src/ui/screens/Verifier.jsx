@@ -34,6 +34,7 @@ export function Verifier() {
   const [assistant, setAssistant] = useState(null); // null | 'partage' | 'copie'
   const [reponse, setReponse] = useState('');
   const fileRef = useRef(null);
+  const galerieRef = useRef(null);
   const roleRef = useRef('piece');
   const hautRef = useRef(null);
 
@@ -81,6 +82,35 @@ export function Verifier() {
   const prendrePhoto = (role) => {
     roleRef.current = role;
     fileRef.current?.click();
+  };
+
+  // Galerie : plusieurs photos d'un coup, rangées dans les cases vides (pièce, étiquette, logo).
+  const surGalerie = async (e) => {
+    const fichiers = [...(e.currentTarget.files || [])].slice(0, 3);
+    e.currentTarget.value = '';
+    if (!fichiers.length) return;
+    setEnCoursPhoto(true);
+    try {
+      const comp = [];
+      for (const f of fichiers) comp.push(await compresserPhoto(f));
+      setPhotos((ps) => {
+        const ordre = ['piece', 'etiquette', 'logo'];
+        const libres = ordre.filter((r) => !ps.some((p) => p.role === r));
+        const cibles = [...libres, ...ordre.filter((r) => !libres.includes(r))];
+        const nouveau = [...ps];
+        comp.forEach((c, i) => {
+          const role = cibles[i];
+          const j = nouveau.findIndex((p) => p.role === role);
+          if (j >= 0) nouveau.splice(j, 1);
+          nouveau.push({ role, ...c });
+        });
+        return nouveau;
+      });
+    } catch {
+      toast('Une photo est illisible, réessaie.');
+    } finally {
+      setEnCoursPhoto(false);
+    }
   };
 
   const surFichier = async (e) => {
@@ -235,6 +265,11 @@ export function Verifier() {
           })}
         </div>
         <input ref={fileRef} type="file" accept="image/*" capture="environment" style="display:none" onChange={surFichier} />
+        <input ref={galerieRef} type="file" accept="image/*" multiple style="display:none" onChange={surGalerie} />
+        <div class="grid2">
+          <button type="button" class="btn s ghost" onClick={() => prendrePhoto(['piece', 'etiquette', 'logo'].find((r) => !photos.some((p) => p.role === r)) || 'piece')}><IconCamera size={18} />Appareil photo</button>
+          <button type="button" class="btn s ghost" onClick={() => galerieRef.current?.click()}>Depuis la galerie</button>
+        </div>
         {photos.length > 0 && (
           <div class="btns">
             <button class="btn dark" onClick={demanderAssistant}><Etincelle color="var(--lilac)" />{ia ? 'Redemander à Claude ou ChatGPT' : 'Demander à Claude ou ChatGPT'}</button>
@@ -392,6 +427,7 @@ export function Verifier() {
             <button class="btn dark big" onClick={photos.length ? acheter : () => prendrePhoto('piece')}>
               {photos.length ? 'Acheter' : <><IconCamera size={22} />Prendre la photo pour acheter</>}
             </button>
+            {!photos.length && <button class="btn s ghost" onClick={() => galerieRef.current?.click()}>Choisir dans la galerie</button>}
             {!photos.length && <button class="btn s ghost" onClick={acheter}>Acheter sans photo</button>}
           </>
         )}

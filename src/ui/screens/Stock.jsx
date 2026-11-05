@@ -269,13 +269,24 @@ export function ArticleFiche({ id, compact = false }) {
   const marques = suggest && a.marque ? chercherMarques(state, a.marque).slice(0, 5) : [];
 
   const ajouterPhoto = async (e) => {
-    const f = e.currentTarget.files?.[0];
+    const fichiers = [...(e.currentTarget.files || [])].slice(0, 8);
     e.currentTarget.value = '';
-    if (!f) return;
-    const { photo, vignette } = await compresserPhoto(f);
-    const pid = nouvelId();
-    store.putPhoto(pid, photo, { role: 'piece' });
-    maj({ photoIds: [...(a.photoIds || []), pid], thumb: a.thumb || vignette });
+    if (!fichiers.length) return;
+    const ids = [...(a.photoIds || [])];
+    let thumb = a.thumb;
+    for (const f of fichiers) {
+      try {
+        const { photo, vignette } = await compresserPhoto(f);
+        const pid = nouvelId();
+        store.putPhoto(pid, photo, { role: 'piece' });
+        ids.push(pid);
+        thumb = thumb || vignette;
+      } catch {
+        toast('Une photo est illisible.');
+      }
+    }
+    maj({ photoIds: ids, thumb });
+    toast(`${ids.length - (a.photoIds || []).length} photo(s) ajoutée(s).`);
   };
 
   let action = null;
@@ -294,7 +305,7 @@ export function ArticleFiche({ id, compact = false }) {
           )}
         </div>
       ) : null}
-      <input ref={fileRef} type="file" accept="image/*" style="display:none" onChange={ajouterPhoto} />
+      <input ref={fileRef} type="file" accept="image/*" multiple style="display:none" onChange={ajouterPhoto} />
 
       <div class="row between" style="align-items:flex-start">
         <div class="col grow">
@@ -329,7 +340,7 @@ export function ArticleFiche({ id, compact = false }) {
         {action && <button class="btn primary big" onClick={action.go}>{action.label}</button>}
         {a.statut === 'vendu' && <button class="btn primary big" onClick={() => changerStatut(store, a, 'envoye')}>Colis déposé</button>}
         {a.statut === 'envoye' && <button class="btn primary big" onClick={() => changerStatut(store, a, 'finalise')}>Finalisé (argent reçu)</button>}
-        {!(a.photoIds || []).length && <button class="btn s ghost" onClick={() => fileRef.current?.click()}><IconCamera size={18} />Ajouter une photo</button>}
+        <button class="btn s ghost" onClick={() => fileRef.current?.click()}><IconCamera size={18} />Ajouter des photos (galerie ou appareil)</button>
       </div>
 
       <div class="card">
